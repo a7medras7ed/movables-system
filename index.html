@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📋 قائمة المنقولات</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+body{font-family:'Cairo',sans-serif;background:#f3f6fa;direction:rtl;text-align:center;padding:20px}
+table{width:100%;border-collapse:collapse;margin-top:10px}
+th,td{border:1px solid #ccc;padding:8px;text-align:center}
+th{background-color:#e3f2fd}
+.btn{padding:8px 16px;margin:4px;border-radius:8px;color:#fff;cursor:pointer;border:none;font-weight:600}
+.add{background:#1976d2}.clear{background:#d32f2f}.edit{background:#f57c00}.pdf{background:#6a1b9a}.print{background:#388e3c}
+#tableContainer{background:#fff;max-width:900px;margin:auto;padding:20px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.1)}
+#searchBox{padding:8px;border:1px solid #bbb;border-radius:6px;width:200px}
+#filterQty{padding:8px;border:1px solid #bbb;border-radius:6px}
+.modal{position:fixed;top:0;left:0;width:100%;height:100%;display:none;justify-content:center;align-items:center;background:rgba(0,0,0,0.4);z-index:1000}
+.modal-content{background:#fff;padding:20px;border-radius:10px;max-width:400px;width:90%;text-align:right}
+.modal input{width:100%;padding:8px;margin:6px 0;border:1px solid #ccc;border-radius:6px}
+</style>
+</head>
+<body>
+
+<h1 class="text-3xl font-bold text-blue-700 mb-4">📋 قائمة المنقولات</h1>
+
+<form id="form">
+  <input id="name" type="text" placeholder="اسم العنصر" required>
+  <input id="qty" type="number" placeholder="الكمية" required>
+  <input id="price" type="number" placeholder="السعر" required>
+  <button class="btn add" type="submit">➕ إضافة</button>
+  <button class="btn clear" type="button" id="clear">🗑 مسح الكل</button>
+</form>
+
+<!-- 🔍 البحث والتصفية -->
+<div style="margin:15px 0;">
+  <input id="searchBox" type="text" placeholder="🔍 بحث عن عنصر...">
+  <select id="filterQty">
+    <option value="all">تصفية حسب الكمية</option>
+    <option value="low">كمية أقل من 5</option>
+    <option value="high">كمية 5 فأكثر</option>
+  </select>
+</div>
+
+<!-- أزرار PDF والطباعة -->
+<div style="margin-bottom:10px;">
+  <button class="btn pdf" id="savePDF">📄 حفظ كـ PDF</button>
+  <button class="btn print" id="printBtn">🖨 طباعة</button>
+</div>
+
+<div id="pdfContent">
+  <div id="tableContainer">
+    <h2 style="color:#1a237e;font-size:24px;margin-bottom:15px;">📋 قائمة المنقولات</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>رقم</th>
+          <th>التاريخ</th>
+          <th>العنصر</th>
+          <th>الكمية</th>
+          <th>السعر</th>
+          <th>الإجمالي</th>
+          <th class="action-col">عمليات</th>
+        </tr>
+      </thead>
+      <tbody id="body"></tbody>
+      <tfoot>
+        <tr>
+          <td colspan="5" style="text-align:right;">💰 الإجمالي الكلي:</td>
+          <td id="total">0</td>
+          <td class="action-col"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+<!-- ✏️ نافذة التعديل -->
+<div class="modal" id="editModal">
+  <div class="modal-content">
+    <h3 class="text-lg font-semibold text-blue-700 mb-2">✏️ تعديل العنصر</h3>
+    <label>اسم العنصر</label>
+    <input type="text" id="editName">
+    <label>الكمية</label>
+    <input type="number" id="editQty">
+    <label>السعر</label>
+    <input type="number" id="editPrice">
+    <div style="text-align:left;margin-top:10px;">
+      <button class="btn add" id="saveEdit">💾 حفظ</button>
+      <button class="btn clear" id="cancelEdit">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let items=[], editIndex=null;
+const form=document.getElementById('form'),
+      body=document.getElementById('body'),
+      totalEl=document.getElementById('total'),
+      clearBtn=document.getElementById('clear'),
+      searchBox=document.getElementById('searchBox'),
+      filterQty=document.getElementById('filterQty'),
+      editModal=document.getElementById('editModal'),
+      editName=document.getElementById('editName'),
+      editQty=document.getElementById('editQty'),
+      editPrice=document.getElementById('editPrice'),
+      saveEdit=document.getElementById('saveEdit'),
+      cancelEdit=document.getElementById('cancelEdit'),
+      savePDF=document.getElementById('savePDF'),
+      printBtn=document.getElementById('printBtn');
+
+form.onsubmit=e=>{
+  e.preventDefault();
+  const name=document.getElementById('name').value.trim(),
+        qty=parseFloat(document.getElementById('qty').value),
+        price=parseFloat(document.getElementById('price').value);
+  if(!name||qty<=0||price<=0)return;
+  const date=new Date().toLocaleDateString('ar-EG');
+  items.push({name,qty,price,date});
+  render();form.reset();
+};
+
+clearBtn.onclick=()=>{if(confirm('هل تريد مسح جميع البيانات؟')){items=[];render();}};
+
+function render(){
+  body.innerHTML='';let total=0;
+  const search=searchBox.value.trim().toLowerCase();
+  const filter=filterQty.value;
+  let filtered=items.filter(it=>it.name.toLowerCase().includes(search));
+  if(filter==='low')filtered=filtered.filter(it=>it.qty<5);
+  else if(filter==='high')filtered=filtered.filter(it=>it.qty>=5);
+
+  filtered.forEach((it,i)=>{
+    const sum=it.qty*it.price;total+=sum;
+    body.innerHTML+=`
+      <tr>
+        <td>${i+1}</td><td>${it.date}</td><td>${it.name}</td>
+        <td>${it.qty}</td><td>${it.price}</td><td>${sum.toFixed(2)}</td>
+        <td class="action-col">
+          <button class="btn edit" onclick="openEdit(${i})">تعديل</button>
+          <button class="btn clear" onclick="deleteItem(${i})">حذف</button>
+        </td>
+      </tr>`;
+  });
+  totalEl.textContent=total.toFixed(2);
+}
+
+function deleteItem(i){if(confirm('هل تريد حذف هذا العنصر؟')){items.splice(i,1);render();}}
+searchBox.oninput=render;
+filterQty.onchange=render;
+
+function openEdit(i){
+  editIndex=i;
+  const it=items[i];
+  editName.value=it.name;
+  editQty.value=it.qty;
+  editPrice.value=it.price;
+  editModal.style.display='flex';
+}
+cancelEdit.onclick=()=>{editModal.style.display='none';};
+saveEdit.onclick=()=>{
+  if(editIndex===null)return;
+  const n=editName.value.trim(),q=parseFloat(editQty.value),p=parseFloat(editPrice.value);
+  if(!n||q<=0||p<=0)return;
+  items[editIndex]={...items[editIndex],name:n,qty:q,price:p};
+  editIndex=null;editModal.style.display='none';render();
+};
+window.onclick=e=>{if(e.target===editModal)editModal.style.display='none';};
+
+// ✅ حفظ كـ PDF (بدون عمود العمليات)
+savePDF.onclick=()=>{
+  if(items.length===0)return alert("لا توجد بيانات!");
+  const {jsPDF}=window.jspdf;
+  document.querySelectorAll(".action-col").forEach(el=>el.style.display="none"); // إخفاء العمليات
+  html2canvas(document.getElementById("tableContainer"),{scale:2,useCORS:true}).then(canvas=>{
+    const img=canvas.toDataURL("image/png");
+    const pdf=new jsPDF("p","pt","a4");
+    const width=pdf.internal.pageSize.getWidth();
+    const height=(canvas.height*width)/canvas.width;
+    pdf.addImage(img,"PNG",0,0,width,height);
+    pdf.save("قائمة-المنقولات.pdf");
+    document.querySelectorAll(".action-col").forEach(el=>el.style.display=""); // إعادة الظهور
+  });
+};
+
+// 🖨 الطباعة (بدون عمود العمليات)
+printBtn.onclick=()=>{
+  if(items.length===0)return alert("لا توجد بيانات للطباعة!");
+  const table=document.getElementById('tableContainer').cloneNode(true);
+  table.querySelectorAll('.action-col').forEach(el=>el.remove());
+  const w=window.open("","_blank");
+  w.document.write(`
+    <html lang="ar" dir="rtl">
+    <head><meta charset="UTF-8">
+    <style>
+      body{font-family:'Cairo',sans-serif;direction:rtl;text-align:center}
+      table{width:100%;border-collapse:collapse;margin-top:20px}
+      th,td{border:1px solid #ccc;padding:8px;text-align:center}
+      th{background-color:#e3f2fd}
+      h2{font-size:24px;color:#1a237e;margin-bottom:20px;}
+    </style></head>
+    <body>
+      <h2>📋 قائمة المنقولات</h2>
+      ${table.innerHTML}
+    </body></html>`);
+  w.document.close();w.print();
+};
+</script>
+</body>
+</html>
