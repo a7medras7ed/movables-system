@@ -9,143 +9,95 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
-body {
-  font-family: 'Cairo', sans-serif;
-  background: #f3f6fa;
-  direction: rtl;
-  text-align: center;
-  padding: 10px;
-}
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
-}
-th, td {
-  border: 1px solid #ccc;
-  padding: 6px;
-  text-align: center;
-}
-th {
-  background-color: #e3f2fd;
-}
-.btn {
-  padding: 8px 12px;
-  margin: 3px;
-  border-radius: 8px;
-  color: #fff;
-  cursor: pointer;
-  border: none;
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-.add { background: #1976d2; }
-.clear { background: #d32f2f; }
-.edit { background: #f57c00; }
-.pdf { background: #6a1b9a; }
-.print { background: #388e3c; }
-#tableContainer {
-  background: #fff;
-  max-width: 100%;
-  overflow-x: auto;
-  margin: auto;
-  padding: 10px;
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-input, select {
-  border: 1px solid #bbb;
-  border-radius: 6px;
-  padding: 8px;
-  width: 100%;
-  max-width: 180px;
-  margin: 3px;
-}
-.modal {
-  position: fixed; top: 0; left: 0;
-  width: 100%; height: 100%;
-  display: none; justify-content: center; align-items: center;
-  background: rgba(0,0,0,0.4);
-  z-index: 1000;
-}
-.modal-content {
-  background: #fff; padding: 20px;
-  border-radius: 10px; max-width: 90%;
-  text-align: right;
-}
-.modal input {
-  width: 100%; padding: 8px;
-  margin: 6px 0; border: 1px solid #ccc;
-  border-radius: 6px;
-}
-
-/* ✅ تحسين العرض على الشاشات الصغيرة */
-@media (max-width: 640px) {
-  body { font-size: 0.9rem; }
-  h1 { font-size: 1.5rem; }
-  table { font-size: 0.8rem; }
-  th, td { padding: 4px; }
-  #tableContainer { padding: 5px; }
-  form, .actions { display: flex; flex-wrap: wrap; justify-content: center; }
-  .btn { flex: 1 1 40%; margin: 4px; font-size: 0.8rem; }
-  input, select { max-width: 45%; flex: 1 1 45%; }
-}
+  body {
+    font-family: 'Cairo', sans-serif;
+    background: #f3f6fa;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+  th, td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: center;
+  }
+  th { background-color: #e3f2fd; }
+  .modal {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    display: none; justify-content: center; align-items: center;
+    background: rgba(0,0,0,0.4); z-index: 1000;
+  }
 </style>
 </head>
-<body>
+<body class="p-4 text-center bg-gray-100">
 
-<h1 class="text-2xl font-bold text-blue-700 mb-4">📋 قائمة المنقولات</h1>
+<h1 class="text-2xl md:text-3xl font-bold text-blue-700 mb-4">📋 قائمة المنقولات</h1>
 
-<form id="form" class="flex flex-wrap justify-center gap-2 mb-3">
-  <input id="name" type="text" placeholder="اسم العنصر" required>
-  <input id="qty" type="number" placeholder="الكمية" required>
-  <input id="price" type="number" placeholder="السعر" required>
-  <button class="btn add" type="submit">➕ إضافة</button>
-  <button class="btn clear" type="button" id="clear">🗑 مسح الكل</button>
+<!-- 🧾 نموذج الإدخال -->
+<form id="form" class="flex flex-wrap justify-center gap-2 mb-4">
+  <input id="name" type="text" placeholder="اسم العنصر" required
+    class="border rounded-lg px-3 py-2 w-full sm:w-48 focus:outline-blue-500">
+  <input id="qty" type="number" placeholder="الكمية" required
+    class="border rounded-lg px-3 py-2 w-full sm:w-32 focus:outline-blue-500">
+  <input id="price" type="number" placeholder="السعر" required
+    class="border rounded-lg px-3 py-2 w-full sm:w-32 focus:outline-blue-500">
+  <button class="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 w-full sm:w-auto">➕ إضافة</button>
+  <button type="button" id="clear" class="bg-red-600 hover:bg-red-700 text-white rounded-lg px-4 py-2 w-full sm:w-auto">🗑 مسح الكل</button>
 </form>
 
-<div class="actions mb-2">
-  <input id="searchBox" type="text" placeholder="🔍 بحث..." />
-  <select id="filterQty">
+<!-- 🔍 البحث والتصفية -->
+<div class="flex flex-wrap justify-center gap-2 mb-4">
+  <input id="searchBox" type="text" placeholder="🔍 بحث..." 
+         class="border rounded-lg px-3 py-2 w-full sm:w-60 focus:outline-blue-500">
+  <select id="filterQty" class="border rounded-lg px-3 py-2 w-full sm:w-48 focus:outline-blue-500">
     <option value="all">تصفية حسب الكمية</option>
     <option value="low">كمية أقل من 5</option>
     <option value="high">كمية 5 فأكثر</option>
   </select>
 </div>
 
-<div class="actions mb-2">
-  <button class="btn pdf" id="savePDF">📄 حفظ كـ PDF</button>
-  <button class="btn print" id="printBtn">🖨 طباعة</button>
+<!-- 📄 أزرار PDF والطباعة -->
+<div class="flex flex-wrap justify-center gap-2 mb-4">
+  <button id="savePDF" class="bg-purple-600 hover:bg-purple-700 text-white rounded-lg px-4 py-2 w-full sm:w-auto">📄 حفظ كـ PDF</button>
+  <button id="printBtn" class="bg-green-600 hover:bg-green-700 text-white rounded-lg px-4 py-2 w-full sm:w-auto">🖨 طباعة</button>
 </div>
 
-<div id="pdfContent">
-  <div id="tableContainer">
-    <h2 style="color:#1a237e;font-size:20px;margin-bottom:10px;">📋 قائمة المنقولات</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>رقم</th><th>التاريخ</th><th>العنصر</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th><th class="action-col">عمليات</th>
-        </tr>
-      </thead>
-      <tbody id="body"></tbody>
-      <tfoot><tr><td colspan="5" style="text-align:right;">💰 الإجمالي الكلي:</td><td id="total">0</td><td class="action-col"></td></tr></tfoot>
-    </table>
-  </div>
+<!-- 📊 الجدول -->
+<div id="pdfContent" class="overflow-x-auto bg-white rounded-lg shadow-md p-3">
+  <h2 class="text-xl text-blue-900 mb-3 font-semibold">📋 قائمة المنقولات</h2>
+  <table class="min-w-[600px] text-sm">
+    <thead>
+      <tr>
+        <th>رقم</th><th>التاريخ</th><th>العنصر</th>
+        <th>الكمية</th><th>السعر</th><th>الإجمالي</th>
+        <th class="action-col">عمليات</th>
+      </tr>
+    </thead>
+    <tbody id="body"></tbody>
+    <tfoot>
+      <tr>
+        <td colspan="5" class="text-right font-bold">💰 الإجمالي الكلي:</td>
+        <td id="total" class="font-bold">0</td>
+        <td class="action-col"></td>
+      </tr>
+    </tfoot>
+  </table>
 </div>
 
-<!-- نافذة التعديل -->
-<div class="modal" id="editModal">
-  <div class="modal-content">
+<!-- ✏️ نافذة التعديل -->
+<div id="editModal" class="modal">
+  <div class="bg-white p-4 rounded-lg w-11/12 sm:w-96">
     <h3 class="text-lg font-semibold text-blue-700 mb-2">✏️ تعديل العنصر</h3>
-    <label>اسم العنصر</label>
-    <input type="text" id="editName">
-    <label>الكمية</label>
-    <input type="number" id="editQty">
-    <label>السعر</label>
-    <input type="number" id="editPrice">
-    <div style="text-align:left;margin-top:10px;">
-      <button class="btn add" id="saveEdit">💾 حفظ</button>
-      <button class="btn clear" id="cancelEdit">إلغاء</button>
+    <label class="block text-right">اسم العنصر</label>
+    <input type="text" id="editName" class="border rounded-lg px-2 py-1 w-full mb-2">
+    <label class="block text-right">الكمية</label>
+    <input type="number" id="editQty" class="border rounded-lg px-2 py-1 w-full mb-2">
+    <label class="block text-right">السعر</label>
+    <input type="number" id="editPrice" class="border rounded-lg px-2 py-1 w-full mb-2">
+    <div class="text-left mt-2 flex gap-2 justify-end">
+      <button id="saveEdit" class="bg-blue-600 text-white px-4 py-1 rounded-lg">💾 حفظ</button>
+      <button id="cancelEdit" class="bg-red-600 text-white px-4 py-1 rounded-lg">إلغاء</button>
     </div>
   </div>
 </div>
@@ -195,8 +147,8 @@ function render(){
         <td>${i+1}</td><td>${it.date}</td><td>${it.name}</td>
         <td>${it.qty}</td><td>${it.price}</td><td>${sum.toFixed(2)}</td>
         <td class="action-col">
-          <button class="btn edit" onclick="openEdit(${i})">تعديل</button>
-          <button class="btn clear" onclick="deleteItem(${i})">حذف</button>
+          <button class="bg-orange-500 text-white rounded px-2 py-1 text-xs" onclick="openEdit(${i})">تعديل</button>
+          <button class="bg-red-600 text-white rounded px-2 py-1 text-xs" onclick="deleteItem(${i})">حذف</button>
         </td>
       </tr>`;
   });
@@ -225,26 +177,48 @@ saveEdit.onclick=()=>{
 };
 window.onclick=e=>{if(e.target===editModal)editModal.style.display='none';};
 
-// ✅ PDF بدون عمود العمليات
-savePDF.onclick=()=>{
-  if(items.length===0)return alert("لا توجد بيانات!");
-  const {jsPDF}=window.jspdf;
-  document.querySelectorAll(".action-col").forEach(el=>el.style.display="none");
-  html2canvas(document.getElementById("tableContainer"),{scale:2,useCORS:true}).then(canvas=>{
-    const img=canvas.toDataURL("image/png");
-    const pdf=new jsPDF("p","pt","a4");
-    const width=pdf.internal.pageSize.getWidth();
-    const height=(canvas.height*width)/canvas.width;
-    pdf.addImage(img,"PNG",0,0,width,height);
+// ✅ حفظ كـ PDF (يدعم الصفحات الطويلة والعريضة بالكامل)
+savePDF.onclick = () => {
+  if (items.length === 0) return alert("لا توجد بيانات!");
+  const { jsPDF } = window.jspdf;
+  document.querySelectorAll(".action-col").forEach(el => el.style.display = "none");
+
+  html2canvas(document.getElementById("pdfContent"), {
+    scale: 2,
+    useCORS: true,
+    scrollY: -window.scrollY,
+    windowWidth: document.getElementById("pdfContent").scrollWidth,
+    windowHeight: document.getElementById("pdfContent").scrollHeight
+  }).then(canvas => {
+    const imgData = canvas.toDataURL("image/png");
+    const pdf = new jsPDF("p", "pt", "a4"); // غيّر إلى "l" لو عايز أفقي
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const imgWidth = pageWidth;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+    let heightLeft = imgHeight;
+    let position = 0;
+
+    pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+    }
+
     pdf.save("قائمة-المنقولات.pdf");
-    document.querySelectorAll(".action-col").forEach(el=>el.style.display="");
+    document.querySelectorAll(".action-col").forEach(el => el.style.display = "");
   });
 };
 
 // 🖨 الطباعة بدون عمود العمليات
 printBtn.onclick=()=>{
   if(items.length===0)return alert("لا توجد بيانات للطباعة!");
-  const table=document.getElementById('tableContainer').cloneNode(true);
+  const table=document.getElementById('pdfContent').cloneNode(true);
   table.querySelectorAll('.action-col').forEach(el=>el.remove());
   const w=window.open("","_blank");
   w.document.write(`
@@ -255,7 +229,6 @@ printBtn.onclick=()=>{
       table{width:100%;border-collapse:collapse;margin-top:20px}
       th,td{border:1px solid #ccc;padding:6px;text-align:center}
       th{background-color:#e3f2fd}
-      h2{font-size:20px;color:#1a237e;margin-bottom:20px;}
     </style></head>
     <body>
       <h2>📋 قائمة المنقولات</h2>
